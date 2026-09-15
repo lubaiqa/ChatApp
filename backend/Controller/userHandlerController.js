@@ -40,18 +40,15 @@ export const getCurrentChatters = async (req, res) => {
       updatedAt: -1,
     });
 
-    if (!currentChatters || currentChatters.length === 0) return (200).send([]);
+    if (!currentChatters || currentChatters.length === 0)
+      return res.status(200).send([]);
 
-    const participantsIDS = currentChatters.reduce((ids, conversation) => {
+    const otherParticipantsIDS = currentChatters.reduce((ids, conversation) => {
       const otherParticipants = conversation.participants.filter(
         (id) => id && id.toString() !== currentUserID.toString(),
       );
       return [...ids, ...otherParticipants];
     }, []);
-
-    const otherParticipantsIDS = participantsIDS.filter(
-      (id) => id && id.toString() !== currentUserID.toString(),
-    );
 
     const user = await User.find({ _id: { $in: otherParticipantsIDS } }).select(
       "-password -email",

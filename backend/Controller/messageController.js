@@ -30,7 +30,6 @@ export const sendMessage = async (req, res) => {
 
     await Promise.all([chats.save(), newMessages.save()]);
 
-    // SOCKET.IO function
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessages);

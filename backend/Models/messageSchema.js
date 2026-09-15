@@ -1,4 +1,3 @@
-import { Timestamp } from "mongodb";
 import mongoose from "mongoose";
 
 const messageSchema = mongoose.Schema(
@@ -20,7 +19,6 @@ const messageSchema = mongoose.Schema(
     conversationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Conversation",
-      default: [],
     },
   },
   { timestamps: true },

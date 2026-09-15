@@ -27,6 +27,7 @@ const Login = () => {
       const data = login.data;
       if (data.success === false) {
         setLoading(false);
+        toast.error(data.message);
         return;
       }
       toast.success(data.message);

@@ -8,266 +8,192 @@ import { TbLogout2 } from "react-icons/tb";
 import userConversation from "../../Zustand/userConversation";
 import { useSocketContext } from "../../context/socketContext";
 
-const Sidebar = () => {
+const Sidebar = ({ onSelectUser }) => {
   const navigate = useNavigate();
   const { authUser, setAuthUser } = useAuth();
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchUser, setSearchUser] = useState([]);
   const [chatUser, setChatUser] = useState([]);
-  const [newMessageUsers, setNewMessageUsers] = useState("");
   const [selectedUserId, setSelectedUserId] = useState(null);
-  const {
-    messages,
-    setMessage,
-    selectedConversation,
-    setSelectedConversation,
-  } = userConversation();
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const { setSelectedConversation } = userConversation();
   const { onlineUser, socket } = useSocketContext();
 
   const nowOnline = chatUser.map((user) => user._id);
-
-  //chats function
   const isOnline = nowOnline.map((userId) => onlineUser.includes(userId));
 
   useEffect(() => {
-    socket?.on("newMessage", (newMessage) => {
-      setNewMessageUsers(newMessage);
-    });
-    return () => socket?.off("newMessage");
-  }, [socket, messages]);
+    const handleNewMessage = (newMessage) => {
+      setUnreadCounts((prev) => {
+        if (newMessage.senderId === selectedUserId) return prev;
+        return {
+          ...prev,
+          [newMessage.senderId]: (prev[newMessage.senderId] || 0) + 1,
+        };
+      });
+    };
 
-  const talkedwith = chatUser.map((user) => user._id);
+    socket?.on("newMessage", handleNewMessage);
+    return () => socket?.off("newMessage", handleNewMessage);
+  }, [socket, selectedUserId]);
 
-  // shows users with whom we chat
   useEffect(() => {
     const chatUserHandler = async () => {
       setLoading(true);
-
       try {
         const chatters = await axios.get(`/api/user/currentchatters`);
-
         const data = chatters.data;
         if (data.success === false) {
-          setLoading(false);
           console.log(data.message);
         }
-        setLoading(false);
         setChatUser(data);
       } catch (error) {
-        setLoading(false);
         console.log(error);
+      } finally {
+        setLoading(false);
       }
     };
     chatUserHandler();
   }, []);
 
-  // shows users from search result
   const handleSearchSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const search = await axios.get(`/api/user/search?search=${searchInput}`);
       const data = search.data;
-      if (data.success === false) {
-        setLoading(false);
-        console.log(data.message);
-      }
-      setLoading(false);
-      if (data.loading === 0) {
+      if (data.length === 0) {
         toast.info("User not Found");
       } else {
         setSearchUser(data);
       }
     } catch (error) {
-      setLoading(false);
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // shows which user is selected
   const handleUserClick = (user) => {
     onSelectUser(user);
     setSelectedConversation(user);
     setSelectedUserId(user._id);
-    setNewMessageUsers("");
+    setUnreadCounts((prev) => ({ ...prev, [user._id]: 0 }));
   };
 
-  // back from search result
   const handleSearchBack = () => {
     setSearchUser([]);
     setSearchInput("");
   };
 
-  // handles logout
   const handleLogOut = async () => {
-    const confirmLogOut = window.prompt("Enter your username to confirm");
-
-    if (confirmLogOut === authUser.username) {
-      setLoading(true);
-
-      try {
-        const logout = await axios.post("/api/auth/logout");
-        const data = logout.data;
-
-        if (data.success === false) {
-          setLoading(false);
-          console.log(data?.message);
-        }
-        toast.info(data?.message);
-        localStorage.removeItem("chatapp");
-        setAuthUser(null);
-        setLoading(false);
-        navigate("/login");
-      } catch (error) {
-        setLoading(false);
-        console.log(error);
-      }
-    } else {
-      toast.info("Username not found. Please check and try again.");
+    try {
+      const logout = await axios.post("/api/auth/logout");
+      toast.info(logout.data?.message);
+      localStorage.removeItem("chatapp");
+      setAuthUser(null);
+      navigate("/login");
+    } catch (error) {
+      console.log(error);
     }
   };
 
+  const listToShow = searchUser.length > 0 ? searchUser : chatUser;
+  const isSearchMode = searchUser.length > 0;
+
   return (
-    <div className="w-full md:w-1/4 rounded-[1.75rem] border border-slate-800 bg-slate-900/95 p-5 shadow-lg shadow-slate-950/20">
-      <div className="flex items-center justify-between gap-2 min-w-0">
+    <div className="flex h-full w-full flex-col bg-slate-950/60 p-4 text-slate-100">
+      <div className="flex items-center gap-2">
         <form
           onSubmit={handleSearchSubmit}
-          className="flex w-full min-w-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-950/90 px-3 py-2"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-800 bg-slate-900/90 px-3 py-2"
         >
           <input
             type="text"
-            placeholder="Search User"
+            placeholder="Search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent text-slate-100 outline-none placeholder:text-slate-500"
+            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
           />
-
           <button
-            className="btn btn-circle bg-cyan-500 text-slate-950 hover:bg-cyan-400"
             type="submit"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cyan-500 text-slate-950 hover:bg-cyan-400"
           >
-            <IoSearch />
+            <IoSearch size={16} />
           </button>
         </form>
-        <div className="shrink-0">
-          <img
-            onClick={() => navigate(`/profile/${authUser?._id}`)}
-            src={authUser?.profilepic}
-            alt="profile"
-            className="h-12 w-12 rounded-full object-cover hover:scale-110 cursor-pointer border border-slate-700"
-          />
-        </div>
+        <img
+          onClick={() => navigate(`/profile/${authUser?._id}`)}
+          src={authUser?.profilepic}
+          alt="profile"
+          className="h-10 w-10 shrink-0 cursor-pointer rounded-full border border-slate-700 object-cover hover:scale-105"
+        />
       </div>
 
-      <div className="divider px-3" />
+      {isSearchMode && (
+        <button
+          onClick={handleSearchBack}
+          className="mt-3 flex w-fit items-center gap-1 text-xs text-slate-400 hover:text-cyan-300"
+        >
+          <IoArrowBackSharp size={14} /> Back
+        </button>
+      )}
 
-      {searchUser?.length > 0 ? (
-        <>
-          <div className="min-h-[70%] max-h-[80%] m overflow-y-auto scrollbar">
-            <div className="w-auto">
-              {searchUser.map((user, index) => (
-                <div key={user._id}>
-                  <div
-                    onClick={() => handleUserClick(user)}
-                    className={`flex gap-3 items-center rounded p-2 py-1 cursor-pointer ${selectedUserId === user?.id ? "bg-sky-500" : ""}`}
-                  >
-                    {/*Socket is Online */}
-                    <div
-                      className={`avatar ${isOnline[index] ? "online" : ""}`}
-                    >
-                      <div className="w-12 rounded-full">
-                        <img src={user.profilepic} alt="user.img" />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col flex-1">
-                      <p className="font-bold text-gray-950">
-                        {user.username}{" "}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="divider divide-solid px-3 h-px"></div>
-                </div>
-              ))}
-            </div>
+      <div className="mt-4 flex-1 space-y-1 overflow-y-auto">
+        {loading && (
+          <div className="flex justify-center py-6">
+            <div className="loading loading-spinner text-cyan-400" />
           </div>
+        )}
 
-          <div className="mt-auto px-1 py-1 flex">
-            <button
-              onClick={handleSearchBack}
-              className="rounded-full bg-white px-2 py-1 self-center"
+        {!loading && listToShow.length === 0 && (
+          <div className="flex flex-col items-center gap-1 py-10 text-center text-sm text-slate-500">
+            <p>Start a Conversation</p>
+            <p>Search a user to chat</p>
+          </div>
+        )}
+
+        {!loading &&
+          listToShow.map((user, index) => (
+            <div
+              key={user._id}
+              onClick={() => handleUserClick(user)}
+              className={`flex cursor-pointer items-center gap-3 rounded-xl p-2 transition ${
+                selectedUserId === user._id
+                  ? "bg-cyan-500/20"
+                  : "hover:bg-slate-800/60"
+              }`}
             >
-              <IoArrowBackSharp size={25} />
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="min-h-[70%] max-h-[80%] overflow-y-auto scrollbar">
-            <div className="w-auto text-slate-300">
-              {chatUser.length === 0 ? (
-                <>
-                  <div className="font-bold items-center flex flex-col text-xl text-yellow-500">
-                    <h1>Start a Conversation</h1>
-                    <h1>Seach User for Chat</h1>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {chatUser.map((user, index) => (
-                    <div key={user._id}>
-                      <div
-                        onClick={() => handleUserClick(user)}
-                        className={`flex gap-3 items-center rounded p-2 py-1 cursor-pointer ${selectedUserId === user?._id ? "bg-sky-500" : ""}`}
-                      >
-                        {/* Socket is Online */}
-                        <div
-                          className={`avatar ${isOnline[index] ? "online" : ""}`}
-                        >
-                          <div className="w-12 rounded-full">
-                            <img src={user.profilepic} alt="user.img" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col flex-1">
-                          <p className="font-bold text-gray-950">
-                            {user.username}{" "}
-                          </p>
-                        </div>
+              <div className="relative shrink-0">
+                <img
+                  src={user.profilepic}
+                  alt={user.username}
+                  className="h-11 w-11 rounded-full object-cover"
+                />
+                {isOnline[index] && (
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-green-400" />
+                )}
+              </div>
 
-                        <div>
-                          {newMessageUsers.receiverId === authUser._id &&
-                          newMessageUsers.senderId === user._id ? (
-                            <div className="rounded-full bg-green-700 text-sm text-white px-[4px] ">
-                              +1{" "}
-                            </div>
-                          ) : (
-                            <></>
-                          )}
-                        </div>
-                      </div>
+              <p className="truncate text-sm font-medium">{user.username}</p>
 
-                      <div className="divider divide-solid px-3 h-px"></div>
-                    </div>
-                  ))}
-                </>
+              {unreadCounts[user._id] > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-green-600 px-1.5 text-[11px] font-bold text-white">
+                  {unreadCounts[user._id]}
+                </span>
               )}
             </div>
-          </div>
+          ))}
+      </div>
 
-          <div className="mt-auto px-1 py-1 flex">
-            <button
-              className="  hover:bg-red-600 w-10 cursor-pointer hover:text-white rounded-lg  "
-              onClick={handleLogOut}
-            >
-              <TbLogout2 size={25} />
-            </button>
-            <p className="text-sm py-1">Logout</p>
-          </div>
-        </>
-      )}
+      <button
+        onClick={handleLogOut}
+        className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-slate-800 py-2 text-sm text-slate-300 hover:border-red-500/50 hover:text-red-400"
+      >
+        <TbLogout2 size={18} />
+        Logout
+      </button>
     </div>
   );
 };

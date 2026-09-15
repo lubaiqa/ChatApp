@@ -14,12 +14,9 @@ export const userRegister = async (req, res) => {
         .send({ success: false, message: "Username or Email already exist!" });
 
     const hashPassword = bcrypt.hashSync(password, 10);
-    const profileGirl =
+    const avatar =
       profilepic ||
-      `http://avatar.iran.liara.run/public/girl?userName=${username}`;
-    const profileBoy =
-      profilepic ||
-      `http://avatar.iran.liara.run/public/boy?userName=${username}`;
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
 
     const newUser = new User({
       fullname,
@@ -27,7 +24,7 @@ export const userRegister = async (req, res) => {
       email,
       password: hashPassword,
       gender,
-      profilepic: gender === "male" ? profileBoy : profileGirl,
+      profilepic: avatar,
     });
 
     await newUser.save();

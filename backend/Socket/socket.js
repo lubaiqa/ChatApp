@@ -4,7 +4,7 @@ import express from "express";
 
 const app = express();
 
-const Server = http.createServer(app);
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: ["http://localhost:5173"],
@@ -16,19 +16,19 @@ export const getReceiverSocketId = (receiverId) => {
   return userSocketmap[receiverId];
 };
 
-const userSocketmap = {}; // {userId, socketId}
+const userSocketmap = {};
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
 
-  if (userId !== "undefine") userSocketmap[userId] = socket.id;
+  if (userId !== "undefined") userSocketmap[userId] = socket.id;
 
   io.emit("getOnlineUsers", Object.keys(userSocketmap));
 
   socket.on("disconnect", () => {
-    (delete userSocketmap[userId],
-      io.emit("getOnlineUsers", Object.keys(userSocketmap)));
+    delete userSocketmap[userId];
+    io.emit("getOnlineUsers", Object.keys(userSocketmap));
   });
 });
 
-export { app, socket, io };
+export { app, server, io };

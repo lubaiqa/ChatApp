@@ -2,33 +2,30 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/authContext";
 import { SiTheconversation } from "react-icons/si";
 import userConversation from "../../Zustand/userConversation";
-import { IoArrowBackSharp } from "react-icons/io5";
+import { IoArrowBackSharp, IoSend } from "react-icons/io5";
 import axios from "axios";
 import { useSocketContext } from "../../context/socketContext";
 import notify from "../../assets/sound/notification.mp3";
 
-const messageContainer = ({ onBackUser }) => {
-  const {
-    messages,
-    selectedConversation,
-    setSelectedConversation,
-    setMessage,
-  } = userConversation();
+const MessageContainer = ({ onBackUser }) => {
+  const { messages, selectedConversation, setMessage } = userConversation();
   const { authUser } = useAuth();
-  const { socket } = useSocketContext;
+  const { socket } = useSocketContext();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendData, setSendData] = useState("");
   const lastMessageRef = useRef();
 
   useEffect(() => {
-    socket?.on("newMessage", (newMessage) => {
+    const handleNewMessage = (newMessage) => {
       const sound = new Audio(notify);
       sound.play();
-      setMessage([...messages, newMessage]);
-    });
-    return () => socket?.off("newMessage");
-  }, [socket, setMessage, messages]);
+      setMessage((prevMessages) => [...prevMessages, newMessage]);
+    };
+
+    socket?.on("newMessage", handleNewMessage);
+    return () => socket?.off("newMessage", handleNewMessage);
+  }, [socket, setMessage]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -39,172 +36,144 @@ const messageContainer = ({ onBackUser }) => {
   useEffect(() => {
     const getMessages = async () => {
       setLoading(true);
-
       try {
         const get = await axios.get(
           `/api/message/${selectedConversation?._id}`,
         );
-        const data = await get.data;
-        if (data.success === false) {
-          setLoading(false);
-          console.log(data.message);
-        }
-        setLoading(false);
-        setMessage(data);
+        setMessage(get.data);
       } catch (error) {
-        setLoading(false);
         console.log(error);
+      } finally {
+        setLoading(false);
       }
     };
-
     if (selectedConversation?._id) getMessages();
   }, [selectedConversation?._id, setMessage]);
 
-  console.log(messages);
-
-  const handleSubmit = (e) => {
+  const handleMessages = (e) => {
     setSendData(e.target.value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!sendData.trim()) return;
     setSending(true);
-
     try {
       const res = await axios.post(
         `/api/message/send/${selectedConversation?._id}`,
         { message: sendData },
       );
-
-      const data = await res.data;
-      if (data.success === false) {
-        setSending(false);
-        console.log(data.message);
-      }
-      setSending(false);
       setSendData("");
-
-      setMessage([...messages, data]);
+      setMessage((prevMessages) => [...prevMessages, res.data]);
     } catch (error) {
-      setSending(false);
       console.log(error);
+    } finally {
+      setSending(false);
     }
   };
 
-  return (
-    <div>
-      <div className="md:min-w-[500px] h-[99 %]  h-full flex flex-col py-2">
-        {selectedConversation === null ? (
-          <div className="flex items-center justify-center w-full h-full">
-            <div className="px-4 text-center text-2xl text-gray-950 font-semibold flex flex-col items-center gap-2">
-              <p className="text-2xl ">Welcome!! {authUser.username}</p>
-              <p className="text-lg">Select a chat to start Conversation!</p>
-
-              <SiTheconversation className="text-6xl text-center" />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex justify-between gap-1 bg-sky-600 md:px-2 rounded-lg h-10 md:h-12">
-              <div className="flex gap-2 md:justify-between items-center w-full">
-                <div className="md:hidden ml-1 self-center">
-                  <button
-                    onClick={() => onBackUser(true)}
-                    className="bg-white rounded-full px-2 py-1 self-center"
-                  >
-                    <IoArrowBackSharp size={25} />
-                  </button>
-                </div>
-                <div className="flex justify-between mr-2 gap-2">
-                  <img
-                    className="rounded-full w-6 h-6 md:w-10 md:h-10 cursor-pointer"
-                    src={selectedConversation?.profilepic}
-                  />
-                </div>
-
-                <span className="text-gray-950 self-center text-sm md:text-xl font-bold">
-                  {selectedConversation?.username}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto">
-              {loading && (
-                <div className="flex w-full h-full flex-col items-center justify-center gap-4 bg-transparent">
-                  <div className="loading loading-spinner "></div>
-                </div>
-              )}
-
-              {!loading && messages?.length === 0 && (
-                <p className="text-center text-white items-center">
-                  Send a message to start Conversation
-                </p>
-              )}
-
-              {!loading &&
-                messages?.length > 0 &&
-                messages?.map((message) => (
-                  <div
-                    className="text-white "
-                    key={message?._id}
-                    ref={lastMessageRef}
-                  >
-                    <div
-                      className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
-                    >
-                      <div className="chat-image avatar"></div>
-
-                      <div
-                        className={`chat-bubble ${message.senderId === authUser._id ? "bg-sky-600" : ""}`}
-                      >
-                        {message?.message}
-                      </div>
-
-                      <div className="chat-footer text-[10px] opacity-80 text-white">
-                        {new Date(message?.createdAt).toLocaleDateString(
-                          "en-PAK",
-                        )}
-                        {new Date(message?.createdAt).toLocaleDateString(
-                          "en-PAK",
-                          { hour: "numeric", minute: "numeric" },
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            <form onSubmit={handleSubmit} className="rounded-full text-black">
-              <div className="w-full rounded-full flex items-centerc bg-white">
-                <input
-                  value={sendData}
-                  onChange={handleMessages}
-                  required
-                  id="message"
-                  type="text"
-                  className="w-full bg-transparent outline-none px-4 rounded-full"
-                />
-
-                <button type="submit">
-                  {sending ? (
-                    <div className="loading loading-spinner"> </div>
-                  ) : (
-                    <IoSend
-                      size={25}
-                      className="text-sky-700 
-
-cursor-pointer rounded-full
- bg-gray-800 w-10 h-auto p-1"
-                    />
-                  )}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
+  if (selectedConversation === null) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
+        <SiTheconversation className="text-6xl text-slate-700" />
+        <p className="text-xl font-semibold text-slate-200">
+          Welcome, {authUser.username}!
+        </p>
+        <p className="text-sm text-slate-500">
+          Select a chat to start a conversation
+        </p>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="flex items-center gap-3 border-b border-white/10 bg-slate-900/80 px-4 py-3">
+        <button
+          onClick={() => onBackUser(true)}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-slate-200 md:hidden"
+        >
+          <IoArrowBackSharp size={18} />
+        </button>
+        <img
+          src={selectedConversation?.profilepic}
+          alt={selectedConversation?.username}
+          className="h-9 w-9 rounded-full object-cover"
+        />
+        <span className="font-semibold text-slate-100">
+          {selectedConversation?.username}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {loading && (
+          <div className="flex h-full items-center justify-center">
+            <div className="loading loading-spinner text-cyan-400" />
+          </div>
+        )}
+
+        {!loading && messages?.length === 0 && (
+          <p className="mt-10 text-center text-sm text-slate-500">
+            Send a message to start the conversation
+          </p>
+        )}
+
+        {!loading &&
+          messages?.length > 0 &&
+          messages.map((message) => (
+            <div
+              key={message._id}
+              ref={lastMessageRef}
+              className={`chat ${
+                message.senderId === authUser._id ? "chat-end" : "chat-start"
+              }`}
+            >
+              <div
+                className={`chat-bubble text-sm text-white ${
+                  message.senderId === authUser._id
+                    ? "bg-cyan-600"
+                    : "bg-slate-800"
+                }`}
+              >
+                {message.message}
+              </div>
+              <div className="chat-footer mt-1 text-[10px] text-slate-500">
+                {new Date(message.createdAt).toLocaleDateString("en-PK")}{" "}
+                {new Date(message.createdAt).toLocaleTimeString("en-PK", {
+                  hour: "numeric",
+                  minute: "numeric",
+                })}
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-2 border-t border-white/10 bg-slate-900/80 px-4 py-3"
+      >
+        <input
+          value={sendData}
+          onChange={handleMessages}
+          required
+          type="text"
+          placeholder="Type a message"
+          className="min-w-0 flex-1 rounded-full border border-slate-700 bg-slate-950/90 px-4 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+        />
+        <button
+          type="submit"
+          disabled={sending}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+        >
+          {sending ? (
+            <div className="loading loading-spinner loading-sm" />
+          ) : (
+            <IoSend size={18} />
+          )}
+        </button>
+      </form>
     </div>
   );
 };
 
-export default messageContainer;
+export default MessageContainer;

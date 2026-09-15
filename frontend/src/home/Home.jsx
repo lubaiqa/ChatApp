@@ -14,20 +14,22 @@ const Home = () => {
     setIsSidebarVisible(true);
     setSelectedUser(null);
   };
+
   return (
-    <div className="flex justify-between min-w-full md:min-w-[550px] md:max-w-[65%] px-2 h-[95%] md:h-full rounded-xl shadow-lg bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-lg bg-opacity-0">
+    <div className="flex h-[95vh] md:h-[90vh] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/90 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
       <div
-        className={`w-full py-2 md:flex ${isSidebarVisible ? "" : "hidden"}`}
+        className={`w-full md:w-[320px] md:shrink-0 border-r border-white/10 ${
+          isSidebarVisible ? "flex" : "hidden md:flex"
+        }`}
       >
         <Sidebar onSelectUser={handleUserSelect} />
       </div>
       <div
-        className={`divider divider-horizontal px-3 md:flex ${isSidebarVisible ? "" : "hidden"} ${selectedUser ? "block" : "hidden"}`}
-      ></div>
-      <div
-        className={`flex-auto bg-gray-200 ${selectedUser ? "" : "hidden md:flex"}`}
+        className={`flex-1 min-w-0 ${
+          isSidebarVisible ? "hidden md:flex" : "flex"
+        }`}
       >
-        <messageContainer onBackUser={handleShowSidebar} />
+        <MessageContainer onBackUser={handleShowSidebar} />
       </div>
     </div>
   );

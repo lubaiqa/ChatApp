@@ -1,4 +1,3 @@
-import { Timestamp } from "mongodb";
 import mongoose from "mongoose";
 
 const userSchema = mongoose.Schema(
@@ -29,7 +28,6 @@ const userSchema = mongoose.Schema(
     },
     profilepic: {
       type: String,
-      required: true,
       default: "",
     },
   },
