@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { TbLogout2 } from "react-icons/tb";
 import userConversation from "../../Zustand/userConversation";
 import { useSocketContext } from "../../context/socketContext";
+import { API_URL } from "../../config";
 
 const Sidebar = ({ onSelectUser }) => {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ const Sidebar = ({ onSelectUser }) => {
     const chatUserHandler = async () => {
       setLoading(true);
       try {
-        const chatters = await axios.get(`/api/user/currentchatters`);
+        const chatters = await axios.get(`${API_URL}/api/user/currentchatters`);
         const data = chatters.data;
         if (data.success === false) {
           console.log(data.message);
@@ -61,7 +62,9 @@ const Sidebar = ({ onSelectUser }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const search = await axios.get(`/api/user/search?search=${searchInput}`);
+      const search = await axios.get(
+        `${API_URL}/api/user/search?search=${searchInput}`,
+      );
       const data = search.data;
       if (data.length === 0) {
         toast.info("User not Found");
@@ -89,7 +92,7 @@ const Sidebar = ({ onSelectUser }) => {
 
   const handleLogOut = async () => {
     try {
-      const logout = await axios.post("/api/auth/logout");
+      const logout = await axios.post(`${API_URL}/api/auth/logout`);
       toast.info(logout.data?.message);
       localStorage.removeItem("chatapp");
       setAuthUser(null);

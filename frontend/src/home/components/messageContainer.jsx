@@ -6,6 +6,7 @@ import { IoArrowBackSharp, IoSend } from "react-icons/io5";
 import axios from "axios";
 import { useSocketContext } from "../../context/socketContext";
 import notify from "../../assets/sound/notification.mp3";
+import { API_URL } from "../../config";
 
 const MessageContainer = ({ onBackUser }) => {
   const { messages, selectedConversation, setMessage } = userConversation();
@@ -38,7 +39,7 @@ const MessageContainer = ({ onBackUser }) => {
       setLoading(true);
       try {
         const get = await axios.get(
-          `/api/message/${selectedConversation?._id}`,
+          `${API_URL}/api/message/${selectedConversation?._id}`,
         );
         setMessage(get.data);
       } catch (error) {
@@ -60,7 +61,7 @@ const MessageContainer = ({ onBackUser }) => {
     setSending(true);
     try {
       const res = await axios.post(
-        `/api/message/send/${selectedConversation?._id}`,
+        `${API_URL}/api/message/send/${selectedConversation?._id}`,
         { message: sendData },
       );
       setSendData("");

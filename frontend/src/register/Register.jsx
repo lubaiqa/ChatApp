@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { API_URL } from "../config";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -32,7 +33,10 @@ const Register = () => {
     }
 
     try {
-      const register = await axios.post(`/api/auth/register`, inputData);
+      const register = await axios.post(
+        `${API_URL}/api/auth/register`,
+        inputData,
+      );
       const data = register.data;
       if (data.success === false) {
         setLoading(false);
